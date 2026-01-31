@@ -19,6 +19,7 @@ type ResolvedAgentConfig = {
   name?: string;
   workspace?: string;
   agentDir?: string;
+  profile?: AgentEntry["profile"];
   model?: AgentEntry["model"];
   memorySearch?: AgentEntry["memorySearch"];
   humanDelay?: AgentEntry["humanDelay"];
@@ -99,6 +100,8 @@ export function resolveAgentConfig(
     name: typeof entry.name === "string" ? entry.name : undefined,
     workspace: typeof entry.workspace === "string" ? entry.workspace : undefined,
     agentDir: typeof entry.agentDir === "string" ? entry.agentDir : undefined,
+    profile:
+      entry.profile && typeof entry.profile === "object" ? (entry.profile as AgentEntry["profile"]) : undefined,
     model:
       typeof entry.model === "string" || (entry.model && typeof entry.model === "object")
         ? entry.model
@@ -112,6 +115,34 @@ export function resolveAgentConfig(
     sandbox: entry.sandbox,
     tools: entry.tools,
   };
+}
+
+export function resolveAgentProfile(cfg: OpenClawConfig, agentId: string): AgentEntry["profile"] {
+  return resolveAgentConfig(cfg, agentId)?.profile;
+}
+
+export function resolveAgentProfileModelPresetId(
+  cfg: OpenClawConfig,
+  agentId: string,
+): string | undefined {
+  const raw = resolveAgentProfile(cfg, agentId)?.modelPreset;
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
+  return trimmed || undefined;
+}
+
+export function resolveAgentProfilePersonaId(cfg: OpenClawConfig, agentId: string): string | undefined {
+  const raw = resolveAgentProfile(cfg, agentId)?.persona;
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
+  return trimmed || undefined;
+}
+
+export function resolveAgentProfileMemoryPath(
+  cfg: OpenClawConfig,
+  agentId: string,
+): string | undefined {
+  const raw = resolveAgentProfile(cfg, agentId)?.memoryPath;
+  const trimmed = typeof raw === "string" ? raw.trim() : "";
+  return trimmed || undefined;
 }
 
 export function resolveAgentModelPrimary(cfg: OpenClawConfig, agentId: string): string | undefined {

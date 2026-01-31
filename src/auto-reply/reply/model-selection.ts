@@ -6,6 +6,8 @@ import {
   type ModelAliasIndex,
   modelKey,
   normalizeProviderId,
+  parseModelRef,
+  resolveAgentModelPreset,
   resolveModelRefFromString,
   resolveThinkingDefault,
 } from "../../agents/model-selection.js";
@@ -220,6 +222,7 @@ function scoreFuzzyMatch(params: {
 
 export async function createModelSelectionState(params: {
   cfg: OpenClawConfig;
+  agentId?: string;
   agentCfg: NonNullable<NonNullable<OpenClawConfig["agents"]>["defaults"]> | undefined;
   sessionEntry?: SessionEntry;
   sessionStore?: Record<string, SessionEntry>;
@@ -332,6 +335,22 @@ export async function createModelSelectionState(params: {
   let defaultThinkingLevel: ThinkLevel | undefined;
   const resolveDefaultThinkingLevel = async () => {
     if (defaultThinkingLevel) return defaultThinkingLevel;
+
+    if (params.agentId) {
+      const preset = resolveAgentModelPreset({ cfg, agentId: params.agentId });
+      if (preset?.preset.thinking) {
+        const parsed = parseModelRef(preset.preset.model, defaultProvider);
+        const matchesModel =
+          parsed &&
+          normalizeProviderId(parsed.provider) === normalizeProviderId(provider) &&
+          parsed.model === model;
+        if (matchesModel) {
+          defaultThinkingLevel = preset.preset.thinking;
+          return defaultThinkingLevel;
+        }
+      }
+    }
+
     let catalogForThinking = modelCatalog ?? allowedModelCatalog;
     if (!catalogForThinking || catalogForThinking.length === 0) {
       modelCatalog = await loadModelCatalog({ config: cfg });

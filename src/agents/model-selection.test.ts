@@ -3,6 +3,7 @@ import {
   parseModelRef,
   resolveModelRefFromString,
   resolveConfiguredModelRef,
+  resolveDefaultModelForAgent,
   buildModelAliasIndex,
   normalizeProviderId,
   modelKey,
@@ -134,6 +135,33 @@ describe("model-selection", () => {
         defaultModel: "gpt-4",
       });
       expect(result).toEqual({ provider: "openai", model: "gpt-4" });
+    });
+  });
+
+  describe("resolveDefaultModelForAgent", () => {
+    it("prefers agent profile modelPreset over agents.list[].model", () => {
+      const cfg: OpenClawConfig = {
+        catalog: {
+          modelPresets: {
+            gpt: { model: "openai/gpt-4o", thinking: "high" },
+          },
+        },
+        agents: {
+          defaults: {
+            model: { primary: "anthropic/claude-3-5-sonnet" },
+          },
+          list: [
+            {
+              id: "oracle",
+              model: "anthropic/claude-opus-4-5",
+              profile: { modelPreset: "gpt" },
+            },
+          ],
+        },
+      } as OpenClawConfig;
+
+      const result = resolveDefaultModelForAgent({ cfg, agentId: "oracle" });
+      expect(result).toEqual({ provider: "openai", model: "gpt-4o" });
     });
   });
 });

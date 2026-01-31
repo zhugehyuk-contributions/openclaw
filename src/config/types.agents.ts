@@ -17,12 +17,23 @@ export type AgentModelConfig =
       fallbacks?: string[];
     };
 
+export type AgentProfileRefConfig = {
+  /** Reference into catalog.modelPresets. */
+  modelPreset?: string;
+  /** Reference into catalog.personas. */
+  persona?: string;
+  /** Optional override for agent-local memory path. */
+  memoryPath?: string;
+};
+
 export type AgentConfig = {
   id: string;
   default?: boolean;
   name?: string;
   workspace?: string;
   agentDir?: string;
+  /** Optional profile references into top-level catalogs. */
+  profile?: AgentProfileRefConfig;
   model?: AgentModelConfig;
   memorySearch?: MemorySearchConfig;
   /** Human-like delay between block replies for this agent. */

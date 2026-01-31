@@ -25,7 +25,7 @@ export default defineConfig({
       "extensions/**/*.test.ts",
       "test/format-error.test.ts",
     ],
-    setupFiles: ["test/setup.ts"],
+    setupFiles: ["test/polyfills.ts", "test/setup.ts"],
     exclude: [
       "dist/**",
       "apps/macos/**",

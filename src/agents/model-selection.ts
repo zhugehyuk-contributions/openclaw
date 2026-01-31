@@ -1,7 +1,7 @@
 import type { OpenClawConfig } from "../config/config.js";
 import type { ModelCatalogEntry } from "./model-catalog.js";
 import { normalizeGoogleModelId } from "./models-config.providers.js";
-import { resolveAgentModelPrimary } from "./agent-scope.js";
+import { resolveAgentModelPrimary, resolveAgentProfileModelPresetId } from "./agent-scope.js";
 import { DEFAULT_MODEL, DEFAULT_PROVIDER } from "./defaults.js";
 
 export type ModelRef = {
@@ -10,6 +10,34 @@ export type ModelRef = {
 };
 
 export type ThinkLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
+
+export type ModelPresetEntry = {
+  model: string;
+  thinking?: ThinkLevel;
+};
+
+export function resolveAgentModelPreset(params: {
+  cfg: OpenClawConfig;
+  agentId: string;
+}): { id: string; preset: ModelPresetEntry } | null {
+  const presetId = resolveAgentProfileModelPresetId(params.cfg, params.agentId);
+  if (!presetId) return null;
+  const raw = (params.cfg.catalog?.modelPresets ?? {}) as Record<string, unknown>;
+  const entry = raw[presetId] as Record<string, unknown> | undefined;
+  if (!entry || typeof entry !== "object") return null;
+
+  const model = String((entry as { model?: unknown }).model ?? "").trim();
+  if (!model) return null;
+
+  const thinkingRaw = (entry as { thinking?: unknown }).thinking;
+  const thinking =
+    typeof thinkingRaw === "string" &&
+    ["off", "minimal", "low", "medium", "high", "xhigh"].includes(thinkingRaw)
+      ? (thinkingRaw as ThinkLevel)
+      : undefined;
+
+  return { id: presetId, preset: { model, thinking } };
+}
 
 export type ModelAliasIndex = {
   byAlias: Map<string, { alias: string; ref: ModelRef }>;
@@ -157,9 +185,13 @@ export function resolveDefaultModelForAgent(params: {
   cfg: OpenClawConfig;
   agentId?: string;
 }): ModelRef {
-  const agentModelOverride = params.agentId
-    ? resolveAgentModelPrimary(params.cfg, params.agentId)
-    : undefined;
+  const preset = params.agentId ? resolveAgentModelPreset({ cfg: params.cfg, agentId: params.agentId }) : null;
+  const agentModelOverride = preset?.preset.model
+    ? preset.preset.model
+    : params.agentId
+      ? resolveAgentModelPrimary(params.cfg, params.agentId)
+      : undefined;
+
   const cfg =
     agentModelOverride && agentModelOverride.length > 0
       ? {

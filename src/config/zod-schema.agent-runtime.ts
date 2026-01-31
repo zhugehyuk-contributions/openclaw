@@ -414,6 +414,16 @@ export const AgentModelSchema = z.union([
     })
     .strict(),
 ]);
+
+export const AgentProfileSchema = z
+  .object({
+    modelPreset: z.string().optional(),
+    persona: z.string().optional(),
+    memoryPath: z.string().optional(),
+  })
+  .strict()
+  .optional();
+
 export const AgentEntrySchema = z
   .object({
     id: z.string(),
@@ -421,6 +431,7 @@ export const AgentEntrySchema = z
     name: z.string().optional(),
     workspace: z.string().optional(),
     agentDir: z.string().optional(),
+    profile: AgentProfileSchema,
     model: AgentModelSchema.optional(),
     memorySearch: MemorySearchSchema,
     humanDelay: HumanDelaySchema.optional(),
