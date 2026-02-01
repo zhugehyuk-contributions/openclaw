@@ -405,6 +405,7 @@ export async function runTui(opts: TuiOptions) {
         return;
       }
       updateBusyStatusMessage();
+      tui.requestRender();
     }, 1000);
   };
 
@@ -434,6 +435,7 @@ export async function runTui(opts: TuiOptions) {
         return;
       }
       updateBusyStatusMessage();
+      tui.requestRender();
     }, 120);
   };
 
