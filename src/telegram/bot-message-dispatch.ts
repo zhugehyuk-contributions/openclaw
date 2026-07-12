@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { resolveAgentDir } from "../agents/agent-scope.js";
 // @ts-nocheck
 import {
@@ -68,6 +69,65 @@ export const dispatchTelegramMessage = async ({
     reactionApi,
     removeAckAfterReply,
   } = context;
+
+  // HABIT short-circuit (P0): Telegram DM → habit-dispatch.ts → reply
+  // Canonical task: habit-lq0.2 (Slack thread: C0ACJF7BJJV ts=1769912028.857069)
+  try {
+    const isPrivateChat = msg?.chat?.type === "private";
+    const text = (msg?.text ?? msg?.caption ?? "").trim();
+    const chatIdStr = String(msg?.chat?.id ?? chatId ?? "");
+    const messageIdStr = String(msg?.message_id ?? "");
+
+    // Start conservative: DM-only + CEO chat allowlist.
+    const allowHabit = isPrivateChat && chatIdStr === "58705735" && !!text;
+
+    // Lightweight trigger to avoid intercepting normal chat.
+    const isHabitTrigger =
+      /^\s*#habit\b/i.test(text) ||
+      /^(새\s*습관|주간리캡|월간리캡|연간리캡|리캡|due|status|운동|헬스)/i.test(text);
+
+    if (allowHabit && isHabitTrigger) {
+      const kstDate = new Date(((msg?.date ?? 0) + 9 * 3600) * 1000).toISOString().slice(0, 10);
+
+      const input = JSON.stringify({
+        provider: "telegram",
+        chatId: chatIdStr,
+        messageId: messageIdStr,
+        text,
+        date: kstDate,
+      });
+
+      const out = spawnSync("bun", ["/home/zhugehyuk/clawd/scripts/habit-dispatch.ts"], {
+        input,
+        encoding: "utf8",
+        env: process.env,
+      });
+
+      if (out.status === 0 && out.stdout) {
+        const parsed = JSON.parse(out.stdout);
+        const replyText = String(parsed?.reply ?? "").trim();
+        if (replyText) {
+          await deliverReplies({
+            bot,
+            cfg,
+            telegramCfg,
+            ctxPayload,
+            chatId,
+            replyThreadId,
+            replyToMode,
+            isGroup,
+            textLimit,
+            replies: [{ text: replyText }],
+            opts,
+          });
+          return;
+        }
+      }
+    }
+  } catch (err) {
+    // Fall through to normal dispatcher on any habit hook failure.
+    logVerbose("habit-dispatch hook failed", err);
+  }
 
   const isPrivateChat = msg.chat.type === "private";
   const messageThreadId = (msg as { message_thread_id?: number }).message_thread_id;

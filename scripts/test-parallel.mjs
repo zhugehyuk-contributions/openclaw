@@ -51,13 +51,18 @@ const WARNING_SUPPRESSION_FLAGS = [
   "--disable-warning=DEP0060",
 ];
 
+const allowedNodeEnvFlags = process.allowedNodeEnvironmentFlags ?? new Set();
+const allowedWarningSuppressionFlags = WARNING_SUPPRESSION_FLAGS.filter((flag) =>
+  allowedNodeEnvFlags.has(flag),
+);
+
 const runOnce = (entry, extraArgs = []) =>
   new Promise((resolve) => {
     const args = maxWorkers
       ? [...entry.args, "--maxWorkers", String(maxWorkers), ...windowsCiArgs, ...extraArgs]
       : [...entry.args, ...windowsCiArgs, ...extraArgs];
     const nodeOptions = process.env.NODE_OPTIONS ?? "";
-    const nextNodeOptions = WARNING_SUPPRESSION_FLAGS.reduce(
+    const nextNodeOptions = allowedWarningSuppressionFlags.reduce(
       (acc, flag) => (acc.includes(flag) ? acc : `${acc} ${flag}`.trim()),
       nodeOptions,
     );
